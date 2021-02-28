@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Weather</string>
+    <string name="tempText">%1$d С°</string>
+    <string name="tempText_lb">Сегодня</string>
+    <string name="temp2Text_lb">Завтра</string>
+    <string name="temp3Text_lb">Послезавтра</string>
 </resources>
