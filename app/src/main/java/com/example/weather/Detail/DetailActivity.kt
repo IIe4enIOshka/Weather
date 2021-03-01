@@ -70,7 +70,6 @@ class DetailActivity : AppCompatActivity() {
         val citys = loadData()
         val id = intent.getIntExtra(EXTRA_ID, 0)
         val city = weatherService.getCity(id, citys)
-        println(city)
         if (city != null) {
             nameText = findViewById(R.id.nameText)
             tempText = findViewById(R.id.tempText)

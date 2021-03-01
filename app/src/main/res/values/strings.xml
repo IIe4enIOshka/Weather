@@ -4,4 +4,5 @@
     <string name="tempText_lb">Сегодня</string>
     <string name="temp2Text_lb">Завтра</string>
     <string name="temp3Text_lb">Послезавтра</string>
+    <string name="dateText">Время обновления: %1$s</string>
 </resources>

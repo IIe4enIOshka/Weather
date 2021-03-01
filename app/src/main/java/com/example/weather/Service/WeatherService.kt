@@ -60,7 +60,6 @@ class WeatherService {
                     val scan = Scanner(`in`)
                     scan.useDelimiter("\\A")
                     val jsonArray = JSONObject(scan.next()).getJSONArray("list")
-                    //println(jsonArray)
                     val df = DecimalFormat("##")
                     name = jsonArray.getJSONObject(0).getString("name").toString()
                     for (i in 0 until 3) {

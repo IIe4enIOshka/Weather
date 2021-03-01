@@ -1,9 +1,13 @@
 package com.example.weather.List
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout.OnRefreshListener
 import com.example.weather.CityAdapter
 import com.example.weather.Detail.DetailActivity
 import com.example.weather.Entity.City
@@ -16,12 +20,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.*
 
 class ListActivity : AppCompatActivity() {
 
     private lateinit var weatherService: WeatherService
+    private lateinit var dateText: TextView
+    private lateinit var mSwipeRefreshLayout: SwipeRefreshLayout
 
-    //lateinit var sharededPreferences: SharedPreferences
     private lateinit var cityList: RecyclerView
 
     private val adapter = CityAdapter {
@@ -33,56 +41,76 @@ class ListActivity : AppCompatActivity() {
         weatherService = (application as WeatherApplication).weatherService
         setContentView(R.layout.activity_main)
 
+        dateText = findViewById(R.id.dateText)
+        dateText.text = getString(R.string.dateText, getDate())
+
         cityList = findViewById(R.id.cityList)
         cityList.adapter = adapter
+
+        mSwipeRefreshLayout = findViewById(R.id.swipeRefresh)
+        mSwipeRefreshLayout.setColorSchemeColors(
+            Color.RED, Color.GREEN, Color.BLUE, Color.CYAN
+        )
+
+        //  слушатель свайпа вниз для обновления данных
+        mSwipeRefreshLayout.setOnRefreshListener(OnRefreshListener {
+            Update()
+        })
     }
 
     override fun onResume() {
         super.onResume()
         adapter.citys = weatherService.getCity()
-
-        if (adapter.citys.isNotEmpty()) {
-            println("fdffd")
-            GlobalScope.launch() {
-                try {
-                    val city = weatherService.getData()
-                    withContext(Dispatchers.Main) {
-                        adapter.citys = city
-                        saveData(adapter.citys)
-                    }
-                } catch (e: Exception) {
-                    Log.d("Error", e.message.toString())
-                }
-            }
+        if (adapter.citys.isEmpty()) {
+            Update()
         } else {
-            GlobalScope.launch() {
-                try {
-                    val city = loadData()
-                    withContext(Dispatchers.Main) {
-                        adapter.citys = city
-                    }
-                } catch (e: Exception) {
-                    Log.d("Error", e.message.toString())
+            val city = loadData()
+            adapter.citys = city
+        }
+    }
+
+    fun Update(){
+        mSwipeRefreshLayout.isRefreshing = true
+        GlobalScope.launch() {
+            try {
+                val city = weatherService.getData()
+                withContext(Dispatchers.Main) {
+                    mSwipeRefreshLayout.isRefreshing = false
+                    adapter.citys = city
+                    saveData(adapter.citys)
+                    dateText.text = getString(R.string.dateText, getDate())
                 }
+            } catch (e: Exception) {
+                Log.d("Error", e.message.toString())
             }
         }
     }
+
 
     fun saveData(list: List<City>) {
         val sharedPreferences = getSharedPreferences("shared pref", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         val mass = JSONArray()
-        for(i in list.indices)
-        {
+        for (i in list.indices) {
             val eachData = JSONObject()
-            mass.put(i, eachData.put("id",list[i].id))
-            mass.put(i, eachData.put("name",list[i].name))
-            mass.put(i, eachData.put("temp",list[i].temp))
-            mass.put(i, eachData.put("temp2",list[i].temp2))
-            mass.put(i, eachData.put("temp3",list[i].temp3))
+            mass.put(i, eachData.put("id", list[i].id))
+            mass.put(i, eachData.put("name", list[i].name))
+            mass.put(i, eachData.put("temp", list[i].temp))
+            mass.put(i, eachData.put("temp2", list[i].temp2))
+            mass.put(i, eachData.put("temp3", list[i].temp3))
         }
         editor.putString("Data", mass.toString())
         editor.apply()
+        val dateFormat: DateFormat = SimpleDateFormat("HH:mm dd.MM.yy")
+        val date = Date()
+        editor.putString("date", dateFormat.format(date))
+        editor.apply()
+    }
+
+    fun getDate(): String? {
+        val sharedPreferences = getSharedPreferences("shared pref", MODE_PRIVATE)
+        val date = sharedPreferences.getString("date", null)
+        return date
     }
 
     fun loadData(): List<City> {
@@ -90,8 +118,7 @@ class ListActivity : AppCompatActivity() {
         val sharedPreferences = getSharedPreferences("shared pref", MODE_PRIVATE)
         val data = sharedPreferences.getString("Data", null)
         val json = JSONArray(data)
-        for (i in 0 until json.length())
-        {
+        for (i in 0 until json.length()) {
             val id = json.getJSONObject(i).getString("id")
             val name = json.getJSONObject(i).getString("name")
             val temp = json.getJSONObject(i).getString("temp").toInt()
