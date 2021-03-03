@@ -11,7 +11,7 @@ import com.example.weather.Service.WeatherService
 import com.example.weather.WeatherApplication
 import org.json.JSONArray
 
-class DetailActivity : AppCompatActivity() {
+class DetailActivity : AppCompatActivity(), DetailView{
 
     companion object {
 
@@ -22,6 +22,14 @@ class DetailActivity : AppCompatActivity() {
             intent.putExtra(EXTRA_ID, id)
             context.startActivity(intent)
         }
+    }
+
+    private val presenter by lazy {
+        DetailPresenter(
+            service = (application as WeatherApplication).weatherService,
+            cityId = intent.getIntExtra(EXTRA_ID, 0),
+            citys = loadData()
+        )
     }
 
     private lateinit var weatherService: WeatherService
@@ -37,16 +45,10 @@ class DetailActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        weatherService = (application as WeatherApplication).weatherService
         setContentView(R.layout.activity_detail)
-
-        tempText_lb = findViewById(R.id.tempText_lb)
-        temp2Text_lb = findViewById(R.id.temp2Text_lb)
-        temp3Text_lb = findViewById(R.id.temp3Text_lb)
-        tempText_lb.text = "Сегодня"
-        temp2Text_lb.text = "Завтра"
-        temp3Text_lb.text = "Послезавтра"
         initViews()
+
+        presenter.attachView(this)
     }
 
     fun loadData(): List<City> {
@@ -67,20 +69,27 @@ class DetailActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        val citys = loadData()
-        val id = intent.getIntExtra(EXTRA_ID, 0)
-        val city = weatherService.getCity(id, citys)
-        if (city != null) {
-            nameText = findViewById(R.id.nameText)
-            tempText = findViewById(R.id.tempText)
-            temp2Text = findViewById(R.id.temp2Text)
-            temp3Text = findViewById(R.id.temp3Text)
+        nameText = findViewById(R.id.nameText)
+        tempText = findViewById(R.id.tempText)
+        temp2Text = findViewById(R.id.temp2Text)
+        temp3Text = findViewById(R.id.temp3Text)
 
-            nameText.text = city.name
-            tempText.text =  getString(R.string.tempText, city.temp)
-            temp2Text.text = getString(R.string.tempText, city.temp2)
-            temp3Text.text = getString(R.string.tempText, city.temp3)
-        }
+        tempText_lb = findViewById(R.id.tempText_lb)
+        temp2Text_lb = findViewById(R.id.temp2Text_lb)
+        temp3Text_lb = findViewById(R.id.temp3Text_lb)
+        tempText_lb.text = "Сегодня"
+        temp2Text_lb.text = "Завтра"
+        temp3Text_lb.text = "Послезавтра"
+    }
 
+    override fun bindCity(city: City) {
+        nameText.text = city.name
+        tempText.text =  getString(R.string.tempText, city.temp)
+        temp2Text.text = getString(R.string.tempText, city.temp2)
+        temp3Text.text = getString(R.string.tempText, city.temp3)
+    }
+
+    override fun closeScreen() {
+        finish()
     }
 }

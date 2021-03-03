@@ -21,8 +21,8 @@ class CityAdapter (private val onClick: (City) -> Unit) : RecyclerView.Adapter<L
     }
 
     override fun onBindViewHolder(holder: ListHolder, position: Int) {
-        val person = citys[position]
-        holder.bind(person)
+        val city = citys[position]
+        holder.bind(city)
     }
 
     override fun getItemCount(): Int = citys.count()

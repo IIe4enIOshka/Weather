@@ -2,7 +2,6 @@ package com.example.weather.List
 
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
@@ -14,7 +13,6 @@ import com.example.weather.Entity.City
 import com.example.weather.R
 import com.example.weather.Service.WeatherService
 import com.example.weather.WeatherApplication
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -24,7 +22,7 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-class ListActivity : AppCompatActivity() {
+class ListActivity : AppCompatActivity(), ListView {
 
     private lateinit var weatherService: WeatherService
     private lateinit var dateText: TextView
@@ -32,17 +30,23 @@ class ListActivity : AppCompatActivity() {
 
     private lateinit var cityList: RecyclerView
 
+    private val presenter by lazy {
+        ListPresenter((application as WeatherApplication).weatherService)
+    }
+
     private val adapter = CityAdapter {
-        DetailActivity.start(this, it.id)
+        presenter.onCityClicked(it)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        presenter.attachView(this)
+
         weatherService = (application as WeatherApplication).weatherService
         setContentView(R.layout.activity_main)
 
         dateText = findViewById(R.id.dateText)
-        dateText.text = getString(R.string.dateText, getDate())
 
         cityList = findViewById(R.id.cityList)
         cityList.adapter = adapter
@@ -54,41 +58,32 @@ class ListActivity : AppCompatActivity() {
 
         //  слушатель свайпа вниз для обновления данных
         mSwipeRefreshLayout.setOnRefreshListener(OnRefreshListener {
-            Update()
+            mSwipeRefreshLayout.isRefreshing = true
+            presenter.onViewUpdate()
+            mSwipeRefreshLayout.isRefreshing = false
         })
     }
 
     override fun onResume() {
         super.onResume()
-        adapter.citys = weatherService.getCity()
-        if (adapter.citys.isEmpty()) {
-            Update()
-        } else {
-            val city = loadData()
-            adapter.citys = city
-        }
+        presenter.onViewResumed()
     }
 
-    fun Update(){
-        mSwipeRefreshLayout.isRefreshing = true
-        GlobalScope.launch() {
-            try {
-                val city = weatherService.getData()
-                withContext(Dispatchers.Main) {
-                    mSwipeRefreshLayout.isRefreshing = false
-                    adapter.citys = city
-                    saveData(adapter.citys)
-                    dateText.text = getString(R.string.dateText, getDate())
-                }
-            } catch (e: Exception) {
-                Log.d("Error", e.message.toString())
-            }
-        }
+    override fun bindCityList(list: List<City>) {
+        adapter.citys = list
     }
 
+    override fun openCityDetailsScreen(cityId: Int) {
+        DetailActivity.start(this, cityId)
+    }
 
-    fun saveData(list: List<City>) {
-        val sharedPreferences = getSharedPreferences("shared pref", MODE_PRIVATE)
+    override fun onDestroy() {
+        presenter.destroy()
+        super.onDestroy()
+    }
+
+    override fun saveData(list: List<City>) {
+        val sharedPreferences = getSharedPreferences("shared pref", AppCompatActivity.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         val mass = JSONArray()
         for (i in list.indices) {
@@ -107,15 +102,16 @@ class ListActivity : AppCompatActivity() {
         editor.apply()
     }
 
-    fun getDate(): String? {
-        val sharedPreferences = getSharedPreferences("shared pref", MODE_PRIVATE)
+    override fun getDate(): String? {
+        val sharedPreferences = getSharedPreferences("shared pref", AppCompatActivity.MODE_PRIVATE)
         val date = sharedPreferences.getString("date", null)
+        dateText.text = getString(R.string.dateText, date)
         return date
     }
 
-    fun loadData(): List<City> {
+    override fun loadData(): List<City> {
         val listCitys = mutableListOf<City>()
-        val sharedPreferences = getSharedPreferences("shared pref", MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences("shared pref", AppCompatActivity.MODE_PRIVATE)
         val data = sharedPreferences.getString("Data", null)
         val json = JSONArray(data)
         for (i in 0 until json.length()) {
@@ -128,5 +124,4 @@ class ListActivity : AppCompatActivity() {
         }
         return listCitys
     }
-
 }
